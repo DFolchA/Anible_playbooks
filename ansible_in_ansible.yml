@@ -1,0 +1,48 @@
+- hosts: local
+
+  tasks:
+
+    - name: vagrant up
+      command: "vagrant up centos7"
+      args:
+        chdir: "/home/dfolch/vagrant"
+
+
+    - name: vagrant ssh-config
+      command: " vagrant ssh-config centos7"
+      args:
+        chdir: "/home/dfolch/vagrant"
+      register: sshconfig
+
+    - name: write ansible inventory
+      copy: content="\n[vagrant]\n{{sshconfig.stdout_lines[1].split()[1]}}\n[vagrant:vars]\nansible_connection=ssh\nansible_ssh_private_key_file={{sshconfig.stdout_lines[7].split()[1]}}\nansible_user={{sshconfig.stdout_lines[2].split()[1]}}\nansible_ssh_host={{sshconfig.stdout_lines[1].split()[1]}}\nansible_ssh_port={{sshconfig.stdout_lines[3].split()[1]}} " dest=/home/dfolch/vagrant/testwrite
+
+    - name: lauch playbook
+      command: "ansible-playbook -i /home/dfolch/vagrant/testwrite /home/dfolch/vagrant/ansible_in_ansible.yml"
+      register: playbook
+
+    - name: print ssh-config
+      debug:
+        msg: "{{playbook}}"
+
+    - name: vagrant destroy
+      command: "vagrant destroy -f centos7"
+      args:
+        chdir: "/home/dfolch/vagrant"
+
+- hosts: vagrant
+  become: true
+  become_user: root
+
+  tasks:
+
+    - name: Write file
+      copy: content="Test file" dest=/home/vagrant/testfile
+
+    - name: fetch
+      fetch:
+        src: /home/vagrant/testfile
+        dest: /home/dfolch/vagrant/fetchedfile
+        flat: yes
+
+
